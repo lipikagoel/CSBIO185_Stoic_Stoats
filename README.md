@@ -22,7 +22,7 @@ GSE213001_filtered_metadata.txt - Processed metadata from GEO series matrix
 **Dupuytren Disease SNP-Linked Genes**\
 SNP_linked_genes.csv - Combined list of SNP-linked genes from Ophoff et al. and GTEx
 
-**Visualizations**
+**Visualizations**\
 GO_Enrichment_Analysis - Gene ontology enrichment analysis for 4 DEG files
 
 ### Citations:
