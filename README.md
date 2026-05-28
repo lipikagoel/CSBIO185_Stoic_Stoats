@@ -23,7 +23,7 @@ GSE213001_filtered_metadata.txt - Processed metadata from GEO series matrix
 SNP_linked_genes.csv - Combined list of SNP-linked genes from Ophoff et al. and GTEx
 
 **Visualizations**
-
+GO_Enrichment_Analysis - Gene ontology enrichment analysis for 4 DEG files
 
 ### Citations:
 - Ng, M., Thakkar, D., Southam, L., Werker, P., Ophoff, R., Becker, K., Nothnagel, M., Franke, A., Nürnberg, P., Espirito-Santo, A. I., Izadi, D., Hennies, H. C., Nanchahal, J., Zeggini, E., & Furniss, D. (2017). A Genome-wide Association Study of Dupuytren Disease Reveals 17 Additional Variants Implicated in Fibrosis. The American Journal of Human Genetics, 101(3), 417–427. https://doi.org/10.1016/j.ajhg.2017.08.006
