@@ -9,7 +9,21 @@ Dupuytren disease (DD) is a type of fibrosis that affects the palm of the hand a
 **_Among the genes referenced in this paper to be potentially associated with the identified DD-correlated SNPs, is there a pattern of differential expression of these genes in idiopathic pulmonary fibrosis (IPF), a similar tissue-specific fibrotic disease?_**
 
 ### Files:
-xx
+**Lung Tissue Sample Gene Expression Data**\
+GSE213001_series_matrix.txt - Downloaded from GEO (GSE213001)\
+GSE213001_filtered_metadata.txt - Processed metadata from GEO series matrix
+
+**Lung Tissue Differential Expression Results**\
+260513_Stoats_NAvNB_DEG_Fixed - NDC apex vs. NDC base (NDC apex is the control)\
+260513_Stoats_IAvIB_DEG_Fixed.csv - IPF apex vs. IPF base (IPF apex is the control)\
+260513_Stoats_NAvIA_DEG_Fixed.csv - NDC apex vs. IPF apex (NDC apex is the control)\
+260513_Stoats_NBvIB_DEG_Fixed - NDC base vs. IPF base (NDC base is the control)
+
+**Dupuytren Disease SNP-Linked Genes**\
+SNP_linked_genes.csv - Combined list of SNP-linked genes from Ophoff et al. and GTEx
+
+**Visualizations**
+
 
 ### Citations:
 - Ng, M., Thakkar, D., Southam, L., Werker, P., Ophoff, R., Becker, K., Nothnagel, M., Franke, A., Nürnberg, P., Espirito-Santo, A. I., Izadi, D., Hennies, H. C., Nanchahal, J., Zeggini, E., & Furniss, D. (2017). A Genome-wide Association Study of Dupuytren Disease Reveals 17 Additional Variants Implicated in Fibrosis. The American Journal of Human Genetics, 101(3), 417–427. https://doi.org/10.1016/j.ajhg.2017.08.006
