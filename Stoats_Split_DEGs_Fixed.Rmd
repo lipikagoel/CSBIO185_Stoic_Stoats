@@ -1,0 +1,558 @@
+---
+title: "260508_Stoats_DEG"
+author: "Abby Bradley"
+date: "2026-05-14"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## step 1: load libraries
+```{r}
+library(DESeq2)
+library(dplyr)
+library(tidyverse)
+library(biomaRt)
+```
+
+
+
+## step 2: read in files
+row.names = 1: col1 has the rownames
+note: counts themselves are technically filtered
+
+### counts themselves
+
+```{r}
+data_raw <- read.csv(file = "C:/Users/abbyb/UCLA/CASB_185/GSE213001_filtered_counts.txt",
+                     row.names = 1,
+                     header = TRUE)
+head(data_raw)
+```
+
+
+### metadata
+```{r}
+metadata <- read.csv(file = "/Users/abbyb/UCLA/CASB_185/GSE213001_filtered_metadata.txt",
+                     row.names = 1,
+                     header = TRUE)
+head(metadata)
+```
+
+
+brief pre filtering, filtering out low-count genes
+```{r}
+# total gene counts >100
+data <- data_raw[rowSums(data_raw[,c(1:103)]) >= 100, ]
+
+print("raw gene number:")
+dim(data_raw)
+
+print("number of genes with sum(counts) >100 across all samples:")
+dim(data)
+```
+
+### remove rows with NA in grouping variable
+```{r}
+# metadata <- metadata[!is.na(metadata$sample_group), ]
+# 
+# # Keep only the columns in 'data' that correspond to the rows in metadata
+# data <- data[, rownames(metadata)]
+```
+
+# step 3: DEGs
+
+# NDC apex vs. IPF apex
+## setup
+### new metadata/data
+first, make new metadata with only samples from NDC apex or IPF apex
+```{r}
+print("Number of samples total:")
+dim(metadata)
+
+# NAvIA_list grabs the sample names with the thing we want to do our DEG on
+NAvIA_list <- rownames(metadata[metadata$group == "IPF.Apex" | metadata$group == "NDC.Apex", ])
+
+NAvIA_metadata <- metadata[NAvIA_list,]
+
+# Drop unused factor levels
+NAvIA_metadata$group <- factor(NAvIA_metadata$group)
+
+print("Number of samples for NAvIA DEG:")
+dim(NAvIA_metadata)
+
+# check it worked
+head(NAvIA_metadata)
+
+# Verify the levels now
+levels(NAvIA_metadata$group)
+```
+
+then, subset data by that metadata
+```{r}
+NAvIA_data <- data[, NAvIA_list]
+
+if (all(colnames(NAvIA_data) == rownames(NAvIA_metadata))) {
+  print("Yes!") 
+} else {
+  print("No :(")
+}
+
+head(NAvIA_data)
+```
+
+### run DESeq from dataset
+```{r}
+# create DESeq data set object
+NAvIA_dds <- DESeqDataSetFromMatrix(countData = NAvIA_data,
+                              colData = NAvIA_metadata,
+                              design = ~ group)
+
+# look data object characteristics
+NAvIA_dds
+```
+
+now relevel w/ NDC apex as the ctrl
+```{r}
+NAvIA_dds$group <- relevel(NAvIA_dds$group, ref = 'NDC.Apex')
+levels(NAvIA_dds$group)
+```
+## DEG
+now DESeq!
+```{r}
+NAvIA_dds <- DESeq(NAvIA_dds)
+NAvIA_dds
+```
+
+### extract DEG results
+pval = 0.05
+ordered smallest to greatest p adjusted
+```{r}
+# grab results
+NAvIA_dds <- results(NAvIA_dds, contrast=c("group","IPF.Apex","NDC.Apex"), alpha=0.05)
+
+# order + view results
+NAvIA_dds.ord <- NAvIA_dds[order(NAvIA_dds$padj),]
+head(NAvIA_dds.ord)
+```
+## change names
+### change ensemble IDs to gene names!
+first, make NAvIA_dds.ord into a df
+```{r}
+NAvIA_DEG <- data.frame(NAvIA_dds.ord)
+```
+
+now do whatever evil magic is going on here
+
+```{r}
+# Extract the column with geneid
+gene_id <-  rownames(NAvIA_DEG)
+
+# Get the gene symbols for all gene_ids
+ensembl <- useMart("ensembl")
+ensembl_dataset <- useDataset("hsapiens_gene_ensembl", mart = ensembl)
+gene_names <- getBM(attributes = c("ensembl_gene_id", "external_gene_name", "gene_biotype"),
+          filters = "ensembl_gene_id",
+          values = gene_id,
+          mart = ensembl_dataset)
+# View(gene_names)
+```
+
+```{r}
+NAvIA_DEG_final <- NAvIA_DEG %>%
+  tibble::rownames_to_column(var = "ensembl_gene_id") %>%
+  inner_join(gene_names, by = "ensembl_gene_id") %>%
+  filter(!is.na(external_gene_name) & external_gene_name != "") %>%
+  column_to_rownames(var = "external_gene_name") %>%
+  # Use base R indexing here instead of select()
+  .[, !names(.) %in% c("ensembl_gene_id")]
+
+# remove NAs
+NAvIA_DEG_final <- na.omit(NAvIA_DEG_final)
+
+# verify it worked
+dim(NAvIA_DEG) #og
+dim(NAvIA_DEG_final) #after filtering
+# check rownames are now gene names
+head(rownames(NAvIA_DEG_final))
+```
+
+## save results
+```{r}
+# write.csv(NAvIA_DEG_final,
+#           file = "/Users/abbyb/UCLA/CASB_185/260513_Stoats_NAvIA_DEG_Fixed.csv")
+```
+
+
+# NDC base vs. IPF base
+## setup
+### new metadata/data
+first, make new metadata with only samples from NDC base or IPF base
+```{r}
+print("Number of samples total:")
+dim(metadata)
+
+# NBvIB_list grabs the sample names with the thing we want to do our DEG on
+NBvIB_list <- rownames(metadata[metadata$group == "NDC.Base" | metadata$group == "IPF.Base", ])
+
+NBvIB_metadata <- metadata[NBvIB_list,]
+
+# Drop unused factor levels
+NBvIB_metadata$group <- factor(NBvIB_metadata$group)
+
+print("Number of samples for NBvIB DEG:")
+dim(NBvIB_metadata)
+
+# check it worked
+head(NBvIB_metadata)
+
+# Verify the levels now
+levels(NBvIB_metadata$group)
+```
+
+
+then, subset data by that metadata
+```{r}
+NBvIB_data <- data[, NBvIB_list]
+if (all(colnames(NBvIB_data) == rownames(NBvIB_metadata))) {
+  print("Yes!") 
+} else {
+  print("No :(")
+}
+
+head(NBvIB_data)
+```
+
+### run DESeq from dataset
+```{r}
+# create DESeq data set object
+NBvIB_dds <- DESeqDataSetFromMatrix(countData = NBvIB_data,
+                              colData = NBvIB_metadata,
+                              design = ~ group)
+
+# look data object characteristics
+NBvIB_dds
+```
+
+now relevel w/ NDC base as the ctrl
+```{r}
+NBvIB_dds$group <- relevel(NBvIB_dds$group, ref = 'NDC.Base')
+levels(NBvIB_dds$group)
+```
+## DEG
+now DESeq!
+```{r}
+NBvIB_dds <- DESeq(NBvIB_dds)
+NBvIB_dds
+```
+
+### extract DEG results
+pval = 0.05
+ordered smallest to greatest p adjusted
+```{r}
+# grab results
+NBvIB_dds <- results(NBvIB_dds, contrast=c("group","IPF.Base","NDC.Base"), alpha=0.05)
+
+# order + view results
+NBvIB_dds.ord <- NBvIB_dds[order(NBvIB_dds$padj),]
+head(NBvIB_dds.ord)
+```
+
+## change names
+### change ensemble IDs to gene names!
+first, make NBvIB_dds.ord into a df
+```{r}
+NBvIB_DEG <- data.frame(NBvIB_dds.ord)
+```
+
+now do whatever evil magic is going on here
+
+```{r}
+# Extract the column with geneid
+gene_id <-  rownames(NBvIB_DEG)
+
+# Get the gene symbols for all gene_ids
+ensembl <- useMart("ensembl")
+ensembl_dataset <- useDataset("hsapiens_gene_ensembl", mart = ensembl)
+gene_names <- getBM(attributes = c("ensembl_gene_id", "external_gene_name", "gene_biotype"),
+          filters = "ensembl_gene_id",
+          values = gene_id,
+          mart = ensembl_dataset)
+# View(gene_names)
+```
+
+```{r}
+NBvIB_DEG_final <- NBvIB_DEG %>%
+  tibble::rownames_to_column(var = "ensembl_gene_id") %>%
+  inner_join(gene_names, by = "ensembl_gene_id") %>%
+  filter(!is.na(external_gene_name) & external_gene_name != "") %>%
+  column_to_rownames(var = "external_gene_name") %>%
+  # Use base R indexing here instead of select()
+  .[, !names(.) %in% c("ensembl_gene_id")]
+
+# remove NAs
+NBvIB_DEG_final <- na.omit(NBvIB_DEG_final)
+
+# verify it worked
+dim(NBvIB_DEG) #og
+dim(NBvIB_DEG_final) #after filtering
+# check rownames are now gene names
+head(rownames(NBvIB_DEG_final))
+```
+
+## save results
+```{r}
+# write.csv(NBvIB_DEG_final,
+#           file = "/Users/abbyb/UCLA/CASB_185/260513_Stoats_NBvIB_DEG_Fixed.csv")
+```
+
+
+
+# IPF apex vs. IPF base
+## setup
+### new metadata/data
+first, make new metadata with only samples from IPF apex or IPF base
+```{r}
+print("Number of samples total:")
+dim(metadata)
+
+# IAvIB_list grabs the sample names with the thing we want to do our DEG on
+IAvIB_list <- rownames(metadata[metadata$group == "IPF.Apex" | metadata$group == "IPF.Base", ])
+
+IAvIB_metadata <- metadata[IAvIB_list,]
+
+# Drop unused factor levels
+IAvIB_metadata$group <- factor(IAvIB_metadata$group)
+
+print("Number of samples for IAvIB DEG:")
+dim(IAvIB_metadata)
+
+# check it worked
+head(IAvIB_metadata)
+
+# Verify the levels now
+levels(IAvIB_metadata$group)
+```
+
+
+then, subset data by that metadata
+```{r}
+IAvIB_data <- data[, IAvIB_list]
+if (all(colnames(IAvIB_data) == rownames(IAvIB_metadata))) {
+  print("Yes!") 
+} else {
+  print("No :(")
+}
+
+head(IAvIB_data)
+```
+
+### run DESeq from dataset
+```{r}
+# create DESeq data set object
+IAvIB_dds <- DESeqDataSetFromMatrix(countData = IAvIB_data,
+                              colData = IAvIB_metadata,
+                              design = ~ group)
+
+# look data object characteristics
+IAvIB_dds
+```
+
+now relevel w/ IPF apex as the ctrl
+```{r}
+IAvIB_dds$group <- relevel(IAvIB_dds$group, ref = 'IPF.Apex')
+levels(IAvIB_dds$group)
+```
+
+## DEG
+now DESeq!
+```{r}
+IAvIB_dds <- DESeq(IAvIB_dds)
+IAvIB_dds
+```
+
+### extract DEG results
+pval = 0.05
+ordered smallest to greatest p adjusted
+```{r}
+# grab results
+IAvIB_dds <- results(IAvIB_dds, contrast=c("group","IPF.Base","IPF.Apex"), alpha=0.05)
+
+# order + view results
+IAvIB_dds.ord <- IAvIB_dds[order(IAvIB_dds$padj),]
+head(IAvIB_dds.ord)
+```
+## change names
+### change ensemble IDs to gene names!
+first, make IAvIB_dds.ord into a df
+```{r}
+IAvIB_DEG <- data.frame(IAvIB_dds.ord)
+```
+
+now do whatever evil magic is going on here
+
+```{r}
+# Extract the column with geneid
+gene_id <-  rownames(IAvIB_DEG)
+
+# Get the gene symbols for all gene_ids
+ensembl <- useMart("ensembl")
+ensembl_dataset <- useDataset("hsapiens_gene_ensembl", mart = ensembl)
+gene_names <- getBM(attributes = c("ensembl_gene_id", "external_gene_name", "gene_biotype"),
+          filters = "ensembl_gene_id",
+          values = gene_id,
+          mart = ensembl_dataset)
+# View(gene_names)
+```
+
+```{r}
+IAvIB_DEG_final <- IAvIB_DEG %>%
+  tibble::rownames_to_column(var = "ensembl_gene_id") %>%
+  inner_join(gene_names, by = "ensembl_gene_id") %>%
+  filter(!is.na(external_gene_name) & external_gene_name != "") %>%
+  column_to_rownames(var = "external_gene_name") %>%
+  # Use base R indexing here instead of select()
+  .[, !names(.) %in% c("ensembl_gene_id")]
+
+# remove NAs
+IAvIB_DEG_final <- na.omit(IAvIB_DEG_final)
+
+# verify it worked
+dim(IAvIB_DEG) #og
+dim(IAvIB_DEG_final) #after filtering
+# check rownames are now gene names
+head(rownames(IAvIB_DEG_final))
+```
+
+## save results
+```{r}
+# write.csv(IAvIB_DEG_final,
+#           file = "/Users/abbyb/UCLA/CASB_185/260513_Stoats_IAvIB_DEG_Fixed.csv")
+```
+
+
+
+# NDC apex vs. NDC base
+## setup
+### new metadata/data
+first, make new metadata with only samples from NDc apex or NDc base
+```{r}
+print("Number of samples total:")
+dim(metadata)
+
+# NAvNB_list grabs the sample names with the thing we want to do our DEG on
+NAvNB_list <- rownames(metadata[metadata$group == "NDC.Apex" | metadata$group == "NDC.Base", ])
+
+NAvNB_metadata <- metadata[NAvNB_list,]
+
+# Drop unused factor levels
+NAvNB_metadata$group <- factor(NAvNB_metadata$group)
+
+print("Number of samples for NAvNB DEG:")
+dim(NAvNB_metadata)
+
+# check it worked
+head(NAvNB_metadata)
+
+# Verify the levels now
+levels(NAvNB_metadata$group)
+```
+
+
+then, subset data by that metadata
+```{r}
+NAvNB_data <- data[, NAvNB_list]
+if (all(colnames(NAvNB_data) == rownames(NAvNB_metadata))) {
+  print("Yes!") 
+} else {
+  print("No :(")
+}
+
+head(NAvNB_data)
+```
+
+### run DESeq from dataset
+```{r}
+# create DESeq data set object
+NAvNB_dds <- DESeqDataSetFromMatrix(countData = NAvNB_data,
+                              colData = NAvNB_metadata,
+                              design = ~ group)
+
+# look data object characteristics
+NAvNB_dds
+```
+
+now relevel w/ IPF apex as the ctrl
+```{r}
+NAvNB_dds$group <- relevel(NAvNB_dds$group, ref = 'NDC.Apex')
+levels(NAvNB_dds$group)
+```
+
+## DEG
+now DESeq!
+```{r}
+NAvNB_dds <- DESeq(NAvNB_dds)
+NAvNB_dds
+```
+
+### extract DEG results
+pval = 0.05
+ordered smallest to greatest p adjusted
+```{r}
+# grab results
+NAvNB_dds <- results(NAvNB_dds, contrast=c("group","NDC.Base","NDC.Apex"), alpha=0.05)
+
+# order + view results
+NAvNB_dds.ord <- NAvNB_dds[order(NAvNB_dds$padj),]
+head(NAvNB_dds.ord)
+```
+## change names
+### change ensemble IDs to gene names!
+first, make NAvNB_dds.ord into a df
+```{r}
+NAvNB_DEG <- data.frame(NAvNB_dds.ord)
+```
+
+now do whatever evil magic is going on here
+
+```{r}
+# Extract the column with geneid
+gene_id <-  rownames(NAvNB_DEG)
+
+# Get the gene symbols for all gene_ids
+ensembl <- useMart("ensembl")
+ensembl_dataset <- useDataset("hsapiens_gene_ensembl", mart = ensembl)
+gene_names <- getBM(attributes = c("ensembl_gene_id", "external_gene_name", "gene_biotype"),
+          filters = "ensembl_gene_id",
+          values = gene_id,
+          mart = ensembl_dataset)
+# View(gene_names)
+```
+
+```{r}
+NAvNB_DEG_final <- NAvNB_DEG %>%
+  tibble::rownames_to_column(var = "ensembl_gene_id") %>%
+  inner_join(gene_names, by = "ensembl_gene_id") %>%
+  filter(!is.na(external_gene_name) & external_gene_name != "") %>%
+  column_to_rownames(var = "external_gene_name") %>%
+  # Use base R indexing here instead of select()
+  .[, !names(.) %in% c("ensembl_gene_id")]
+
+# remove NAs
+NAvNB_DEG_final <- na.omit(NAvNB_DEG_final)
+
+# verify it worked
+dim(NAvNB_DEG) #og
+dim(NAvNB_DEG_final) #after filtering
+# check rownames are now gene names
+head(rownames(NAvNB_DEG_final))
+```
+
+## save results
+```{r}
+# write.csv(NAvNB_DEG_final,
+#           file = "/Users/abbyb/UCLA/CASB_185/260513_Stoats_NAvNB_DEG_Fixed.csv")
+```
+
+
+
