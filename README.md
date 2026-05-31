@@ -26,7 +26,7 @@ SNP_linked_genes.csv - Combined list of SNP-linked genes from Ophoff et al. and 
 splitFiles - GEO Accession file (metadata and counts matrix) formatting/filtering for DGE and downstream analyses
 
 **Visualizations**\
-DEGfigures - Downstream DEG analysis / visualization
+DEGfigures - Downstream DEG analysis / visualization\
 GO_Enrichment_Analysis - Gene ontology enrichment analysis for 4 DEG files
 
 ### Citations:
