@@ -14,6 +14,7 @@ GSE213001_series_matrix.txt - Downloaded from GEO (GSE213001)\
 GSE213001_filtered_metadata.txt - Processed metadata from GEO series matrix
 
 **Lung Tissue Differential Expression Results**\
+Stoats_Split_DEGs_Fixed - DEG code\
 260513_Stoats_NAvNB_DEG_Fixed - NDC apex vs. NDC base (NDC apex is the control)\
 260513_Stoats_IAvIB_DEG_Fixed.csv - IPF apex vs. IPF base (IPF apex is the control)\
 260513_Stoats_NAvIA_DEG_Fixed.csv - NDC apex vs. IPF apex (NDC apex is the control)\
